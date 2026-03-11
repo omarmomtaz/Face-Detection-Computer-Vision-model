@@ -1,0 +1,1729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Omar Momtaz · Face Detection System · AI/ML Engineering</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --red:    #8B0000;
+  --red-bright: #C0392B;
+  --gold:   #D4AF37;
+  --gold-light: #F0D060;
+  --black:  #0A0A0A;
+  --black2: #111111;
+  --black3: #1A1A1A;
+  --cyan:   #00E5FF;
+  --cyan-dim: rgba(0,229,255,0.15);
+  --text:   #E8E4D8;
+  --muted:  #6B6560;
+  --border-gold: rgba(212,175,55,0.2);
+  --border-red:  rgba(139,0,0,0.4);
+  --border-cyan: rgba(0,229,255,0.2);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--black);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 400;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* CUSTOM CURSOR */
+.cursor {
+  position: fixed;
+  width: 12px; height: 12px;
+  background: var(--cyan);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: transform 0.1s ease, width 0.2s, height 0.2s, background 0.2s;
+  mix-blend-mode: screen;
+}
+.cursor-ring {
+  position: fixed;
+  width: 36px; height: 36px;
+  border: 1px solid rgba(0,229,255,0.5);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  transform: translate(-50%, -50%);
+  transition: transform 0.15s ease, width 0.3s, height 0.3s;
+}
+
+/* SCANLINE OVERLAY */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.08) 2px,
+    rgba(0,0,0,0.08) 4px
+  );
+  pointer-events: none;
+  z-index: 500;
+}
+
+/* ═══════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════ */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  padding: 1.2rem 3rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(to bottom, rgba(10,10,10,0.95), transparent);
+  backdrop-filter: blur(8px);
+}
+
+.nav-logo {
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--gold);
+  text-decoration: none;
+}
+
+.nav-logo span { color: var(--cyan); }
+
+.nav-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  text-transform: uppercase;
+  border: 1px solid var(--border-gold);
+  padding: 0.3rem 0.8rem;
+}
+
+/* ═══════════════════════════════════════
+   HERO SECTION
+═══════════════════════════════════════ */
+.hero {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Dragon fire bg */
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 100%, rgba(139,0,0,0.35) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 30% 60%, rgba(139,0,0,0.1) 0%, transparent 60%),
+    radial-gradient(ellipse 30% 30% at 70% 40%, rgba(0,229,255,0.04) 0%, transparent 60%);
+}
+
+/* Animated grid */
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(212,175,55,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212,175,55,0.04) 1px, transparent 1px);
+  background-size: 80px 80px;
+  animation: gridPulse 8s ease-in-out infinite;
+}
+
+@keyframes gridPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Floating particles */
+.particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  animation: float linear infinite;
+}
+@keyframes float {
+  0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(-100px) rotate(720deg); opacity: 0; }
+}
+
+/* Corner brackets */
+.hero::before, .hero::after {
+  content: '';
+  position: absolute;
+  width: 60px; height: 60px;
+  border-color: var(--gold);
+  border-style: solid;
+  opacity: 0.4;
+}
+.hero::before { top: 8rem; left: 3rem; border-width: 2px 0 0 2px; }
+.hero::after  { bottom: 4rem; right: 3rem; border-width: 0 2px 2px 0; }
+
+.hero-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  margin-bottom: 1.5rem;
+  opacity: 0;
+  animation: fadeUp 0.8s 0.3s ease forwards;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.hero-eyebrow::before, .hero-eyebrow::after {
+  content: '';
+  width: 40px; height: 1px;
+  background: var(--cyan);
+  opacity: 0.5;
+}
+
+.hero-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(3rem, 9vw, 7.5rem);
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+  opacity: 0;
+  animation: fadeUp 0.8s 0.5s ease forwards;
+}
+
+.hero-title .line1 { color: var(--text); display: block; }
+.hero-title .line2 {
+  display: block;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light), var(--gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite, fadeUp 0.8s 0.5s ease forwards;
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.hero-title .line3 { color: var(--red-bright); display: block; font-size: 0.7em; letter-spacing: 0.1em; }
+
+.hero-sub {
+  font-size: 1.1rem;
+  font-weight: 300;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  margin: 2rem 0 3.5rem;
+  max-width: 560px;
+  line-height: 1.7;
+  opacity: 0;
+  animation: fadeUp 0.8s 0.7s ease forwards;
+}
+
+.hero-cta-row {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  opacity: 0;
+  animation: fadeUp 0.8s 0.9s ease forwards;
+}
+
+.btn-primary {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.9rem 2.2rem;
+  background: var(--red);
+  color: var(--gold);
+  border: 2px solid var(--red);
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+}
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--gold), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.btn-primary:hover { color: var(--black); border-color: var(--gold); }
+.btn-primary:hover::before { opacity: 1; }
+
+.btn-ghost {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.9rem 2.2rem;
+  background: transparent;
+  color: var(--cyan);
+  border: 1px solid var(--border-cyan);
+  text-decoration: none;
+  transition: all 0.3s;
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+}
+.btn-ghost:hover { background: var(--cyan-dim); border-color: var(--cyan); }
+
+/* Scroll indicator */
+.scroll-hint {
+  position: absolute;
+  bottom: 2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0;
+  animation: fadeIn 1s 1.5s ease forwards;
+}
+.scroll-hint span {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.scroll-line {
+  width: 1px;
+  height: 50px;
+  background: linear-gradient(to bottom, var(--gold), transparent);
+  animation: scrollPulse 2s ease-in-out infinite;
+}
+@keyframes scrollPulse {
+  0%, 100% { transform: scaleY(0.5); transform-origin: top; opacity: 0.5; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+/* ═══════════════════════════════════════
+   SECTION FRAMEWORK
+═══════════════════════════════════════ */
+section { position: relative; }
+
+.section-marker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+.section-marker .num {
+  color: var(--gold);
+  font-size: 0.75rem;
+}
+.section-marker::after {
+  content: '';
+  flex: 1;
+  max-width: 80px;
+  height: 1px;
+  background: linear-gradient(to right, var(--gold), transparent);
+}
+
+/* ═══════════════════════════════════════
+   PROBLEM STATEMENT
+═══════════════════════════════════════ */
+.problem {
+  padding: 8rem 0;
+  background: var(--black);
+  overflow: hidden;
+}
+
+.problem-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 3rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6rem;
+  align-items: center;
+}
+
+.problem-text h2 {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text);
+  margin-bottom: 1.5rem;
+}
+.problem-text h2 em {
+  font-style: normal;
+  color: var(--red-bright);
+}
+
+.problem-text p {
+  font-size: 1rem;
+  line-height: 1.9;
+  color: #9A9590;
+  font-weight: 300;
+  margin-bottom: 1rem;
+}
+
+.problem-visual {
+  position: relative;
+  height: 360px;
+}
+
+/* Animated scanning frame */
+.scan-frame {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--border-gold);
+}
+.scan-frame::before, .scan-frame::after {
+  content: '';
+  position: absolute;
+  width: 20px; height: 20px;
+  border-color: var(--gold);
+  border-style: solid;
+}
+.scan-frame::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+.scan-frame::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+.face-placeholder {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 160px; height: 160px;
+}
+
+.face-circle {
+  width: 160px; height: 160px;
+  border-radius: 50%;
+  background: var(--black3);
+  border: 1px solid rgba(139,0,0,0.3);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Scanning line */
+.scan-line {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(to right, transparent, var(--cyan), transparent);
+  animation: scan 3s ease-in-out infinite;
+  box-shadow: 0 0 12px var(--cyan);
+}
+@keyframes scan {
+  0% { top: 5%; }
+  50% { top: 95%; }
+  100% { top: 5%; }
+}
+
+/* Detection box */
+.detect-box {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 180px; height: 180px;
+  border: 2px solid var(--cyan);
+  animation: detectPulse 3s ease-in-out infinite;
+}
+.detect-box::before, .detect-box::after {
+  content: '';
+  position: absolute;
+  width: 16px; height: 16px;
+}
+.detect-box::before { top: -2px; left: -2px; border-top: 3px solid var(--gold); border-left: 3px solid var(--gold); }
+.detect-box::after  { bottom: -2px; right: -2px; border-bottom: 3px solid var(--gold); border-right: 3px solid var(--gold); }
+
+@keyframes detectPulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(0,229,255,0.3), inset 0 0 0 rgba(0,229,255,0); opacity: 0.7; }
+  50% { box-shadow: 0 0 20px rgba(0,229,255,0.4), inset 0 0 10px rgba(0,229,255,0.05); opacity: 1; }
+}
+
+.detect-label {
+  position: absolute;
+  top: -28px; left: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--cyan);
+  letter-spacing: 0.1em;
+  background: rgba(0,229,255,0.08);
+  padding: 0.2rem 0.5rem;
+  border: 1px solid rgba(0,229,255,0.3);
+}
+
+.confidence-bar {
+  position: absolute;
+  bottom: -50px; left: 0; right: 0;
+}
+.confidence-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.3rem;
+}
+.bar-track {
+  height: 3px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, var(--red), var(--gold));
+  animation: fillBar 3s ease-in-out infinite;
+}
+@keyframes fillBar {
+  0% { width: 0%; }
+  60% { width: 94%; }
+  100% { width: 94%; }
+}
+
+/* ═══════════════════════════════════════
+   DEMO OUTPUT SECTION
+═══════════════════════════════════════ */
+.demo-output {
+  padding: 8rem 0;
+  background: var(--black2);
+  border-top: 1px solid var(--border-red);
+  border-bottom: 1px solid var(--border-red);
+}
+
+.demo-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 3rem;
+}
+
+.demo-screen {
+  background: var(--black);
+  border: 1px solid rgba(212,175,55,0.15);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 40px rgba(139,0,0,0.1);
+}
+
+.demo-topbar {
+  background: var(--black3);
+  padding: 0.75rem 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot.r { background: #FF5F56; }
+.dot.y { background: #FFBD2E; }
+.dot.g { background: #27C93F; }
+.demo-filename {
+  margin-left: 0.8rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+
+.demo-img-area {
+  background: white;
+  padding: 1.5rem 3rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.demo-img-area img {
+  max-width: 100%;
+  display: block;
+}
+
+/* Stats below demo */
+.demo-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin-top: 2rem;
+  border: 1px solid var(--border-gold);
+  overflow: hidden;
+}
+
+.d-stat {
+  padding: 1.8rem;
+  text-align: center;
+  border-right: 1px solid var(--border-gold);
+  background: var(--black);
+  position: relative;
+  overflow: hidden;
+  transition: background 0.3s;
+}
+.d-stat:last-child { border-right: none; }
+.d-stat:hover { background: var(--black3); }
+.d-stat::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(to right, var(--red), var(--gold));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s;
+}
+.d-stat:hover::after { transform: scaleX(1); }
+
+.d-stat-num {
+  font-family: 'Cinzel', serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: block;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+.d-stat-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ═══════════════════════════════════════
+   ARCHITECTURE SECTION
+═══════════════════════════════════════ */
+.architecture {
+  padding: 8rem 0;
+  background: var(--black);
+  overflow: hidden;
+}
+
+.arch-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 3rem;
+}
+
+.arch-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1.8rem, 3.5vw, 3rem);
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 3.5rem;
+}
+.arch-title span { color: var(--gold); }
+
+.arch-flow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 3rem;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+}
+
+.arch-node {
+  flex-shrink: 0;
+  background: var(--black3);
+  border: 1px solid var(--border-gold);
+  padding: 1.2rem 1.5rem;
+  text-align: center;
+  min-width: 130px;
+  position: relative;
+  transition: border-color 0.3s, transform 0.3s;
+}
+.arch-node:hover {
+  border-color: var(--gold);
+  transform: translateY(-4px);
+  z-index: 1;
+}
+.arch-node-icon {
+  font-size: 1.5rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+.arch-node-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  display: block;
+  margin-bottom: 0.3rem;
+}
+.arch-node-sub {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.arch-arrow {
+  flex-shrink: 0;
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(to right, var(--red), var(--gold));
+  position: relative;
+}
+.arch-arrow::after {
+  content: '';
+  position: absolute;
+  right: -1px; top: -4px;
+  border: 5px solid transparent;
+  border-left: 8px solid var(--gold);
+}
+
+/* Feature cards */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-gold);
+}
+
+.feat-card {
+  background: var(--black);
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.3s;
+}
+.feat-card:hover { background: var(--black3); }
+
+.feat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 3px; height: 0;
+  background: linear-gradient(to bottom, var(--red), var(--gold));
+  transition: height 0.4s;
+}
+.feat-card:hover::before { height: 100%; }
+
+.feat-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--red-bright);
+  letter-spacing: 0.1em;
+  margin-bottom: 1rem;
+  display: block;
+}
+.feat-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gold);
+  margin-bottom: 0.8rem;
+}
+.feat-desc {
+  font-size: 0.85rem;
+  color: #7A7570;
+  line-height: 1.7;
+  font-weight: 300;
+}
+
+/* ═══════════════════════════════════════
+   CODE REVEAL SECTION
+═══════════════════════════════════════ */
+.code-section {
+  padding: 8rem 0;
+  background: var(--black2);
+  border-top: 1px solid var(--border-gold);
+}
+
+.code-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 3rem;
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 5rem;
+  align-items: start;
+}
+
+.code-meta h2 {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: 1.5rem;
+  color: var(--text);
+}
+.code-meta h2 span { color: var(--cyan); }
+
+.code-meta p {
+  font-size: 0.95rem;
+  color: #7A7570;
+  line-height: 1.9;
+  font-weight: 300;
+  margin-bottom: 2rem;
+}
+
+.code-points {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.code-points li {
+  font-size: 0.85rem;
+  color: var(--text);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  line-height: 1.5;
+}
+.code-points li::before {
+  content: '▸';
+  color: var(--gold);
+  flex-shrink: 0;
+  margin-top: 0.05rem;
+}
+
+.code-window {
+  background: #0D0D0D;
+  border: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+}
+
+.code-bar {
+  background: var(--black3);
+  padding: 0.6rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.code-bar-name {
+  margin-left: 0.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+.code-bar-badge {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--cyan);
+  border: 1px solid var(--border-cyan);
+  padding: 0.15rem 0.5rem;
+}
+
+pre.code-content {
+  padding: 1.8rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  line-height: 1.85;
+  color: #ABB2BF;
+  overflow-x: auto;
+}
+
+.kw  { color: #C678DD; }
+.fn  { color: #61AFEF; }
+.str { color: #98C379; }
+.cm  { color: #5C6370; font-style: italic; }
+.num { color: #D19A66; }
+.cls { color: var(--gold); }
+.cy  { color: var(--cyan); }
+
+/* ═══════════════════════════════════════
+   USE CASES
+═══════════════════════════════════════ */
+.usecases {
+  padding: 8rem 0;
+  background: var(--black);
+  position: relative;
+  overflow: hidden;
+}
+
+.usecases::before {
+  content: 'VISION';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Cinzel', serif;
+  font-size: clamp(8rem, 18vw, 16rem);
+  font-weight: 900;
+  color: rgba(139,0,0,0.04);
+  letter-spacing: 0.1em;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.usecases-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 3rem;
+  position: relative;
+  z-index: 1;
+}
+
+.usecases-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1.8rem, 3.5vw, 3rem);
+  font-weight: 700;
+  margin-bottom: 3.5rem;
+  color: var(--text);
+}
+.usecases-title em { font-style: normal; color: var(--red-bright); }
+
+.cases-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border-gold);
+}
+
+.case-card {
+  background: var(--black);
+  padding: 2.5rem 2rem;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.3s;
+  cursor: default;
+}
+.case-card:hover { background: var(--black3); }
+
+.case-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--red), transparent);
+  transform: scaleX(0);
+  transition: transform 0.5s;
+}
+.case-card:hover::after { transform: scaleX(1); }
+
+.case-icon {
+  width: 48px; height: 48px;
+  border: 1px solid var(--border-red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  margin-bottom: 1.5rem;
+  transition: border-color 0.3s;
+}
+.case-card:hover .case-icon { border-color: var(--gold); }
+
+.case-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gold);
+  margin-bottom: 0.8rem;
+}
+
+.case-desc {
+  font-size: 0.82rem;
+  color: #6A6560;
+  line-height: 1.7;
+  font-weight: 300;
+}
+
+/* ═══════════════════════════════════════
+   STACK
+═══════════════════════════════════════ */
+.stack-section {
+  padding: 6rem 0;
+  background: var(--black2);
+  border-top: 1px solid var(--border-red);
+}
+
+.stack-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 3rem;
+}
+
+.stack-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 2.5rem;
+}
+
+.stack-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.s-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  padding: 0.5rem 1.2rem;
+  text-transform: uppercase;
+  border: 1px solid;
+  transition: all 0.2s;
+  clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+}
+.s-pill.core { color: var(--gold); border-color: rgba(212,175,55,0.35); background: rgba(212,175,55,0.04); }
+.s-pill.core:hover { background: rgba(212,175,55,0.12); border-color: var(--gold); }
+.s-pill.lib  { color: var(--cyan); border-color: rgba(0,229,255,0.3); background: rgba(0,229,255,0.04); }
+.s-pill.lib:hover { background: var(--cyan-dim); border-color: var(--cyan); }
+.s-pill.mode { color: #C0392B; border-color: rgba(192,57,43,0.3); background: rgba(139,0,0,0.06); }
+.s-pill.mode:hover { background: rgba(139,0,0,0.15); border-color: var(--red-bright); }
+
+/* ═══════════════════════════════════════
+   TERMINAL LOG
+═══════════════════════════════════════ */
+.terminal-section {
+  padding: 6rem 0;
+  background: var(--black);
+}
+
+.term-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 3rem;
+}
+
+.terminal-window {
+  background: #050508;
+  border: 1px solid rgba(255,255,255,0.07);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 30px rgba(139,0,0,0.1);
+}
+
+.term-bar {
+  background: var(--black3);
+  padding: 0.7rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.term-title {
+  margin-left: 0.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+.term-status {
+  margin-left: auto;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #27C93F;
+  box-shadow: 0 0 6px #27C93F;
+  animation: blink 2s ease-in-out infinite;
+}
+@keyframes blink {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.term-body {
+  padding: 2rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  line-height: 2;
+  color: #6B7280;
+}
+.t-gold { color: var(--gold-light); }
+.t-red  { color: var(--red-bright); }
+.t-cyan { color: var(--cyan); }
+.t-green{ color: #27C93F; }
+.t-sep  { color: #222; }
+.t-white{ color: var(--text); }
+
+/* ═══════════════════════════════════════
+   CTA / HIRE SECTION
+═══════════════════════════════════════ */
+.hire-section {
+  padding: 10rem 0;
+  background: var(--black2);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.hire-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 50%, rgba(139,0,0,0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hire-bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(212,175,55,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212,175,55,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+.hire-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.hire-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--red-bright);
+  margin-bottom: 1.5rem;
+}
+
+.hire-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(2.5rem, 6vw, 5rem);
+  font-weight: 900;
+  line-height: 1;
+  color: var(--text);
+  margin-bottom: 1rem;
+}
+
+.hire-title span {
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hire-sub {
+  font-size: 1rem;
+  color: var(--muted);
+  font-weight: 300;
+  line-height: 1.8;
+  margin: 1.5rem 0 3rem;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.hire-btns {
+  display: flex;
+  gap: 1.2rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Divider ornament */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 2.5rem auto;
+  max-width: 300px;
+}
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--border-gold));
+}
+.divider-line.r {
+  background: linear-gradient(to left, transparent, var(--border-gold));
+}
+.divider-diamond {
+  width: 8px; height: 8px;
+  background: var(--gold);
+  transform: rotate(45deg);
+}
+
+/* ═══════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════ */
+footer {
+  padding: 2rem 3rem;
+  border-top: 1px solid var(--border-gold);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footer-brand {
+  font-family: 'Cinzel', serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+}
+
+.footer-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ═══════════════════════════════════════
+   SCROLL ANIMATIONS
+═══════════════════════════════════════ */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideLeft {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reveal.left  { transform: translateX(-40px); }
+.reveal.right { transform: translateX(40px); }
+.reveal.visible {
+  opacity: 1;
+  transform: translate(0, 0);
+}
+.reveal.delay-1 { transition-delay: 0.1s; }
+.reveal.delay-2 { transition-delay: 0.2s; }
+.reveal.delay-3 { transition-delay: 0.3s; }
+.reveal.delay-4 { transition-delay: 0.4s; }
+.reveal.delay-5 { transition-delay: 0.5s; }
+
+/* ═══════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════ */
+@media (max-width: 768px) {
+  .problem-inner, .code-inner { grid-template-columns: 1fr; gap: 3rem; }
+  .feature-grid, .cases-grid { grid-template-columns: 1fr; }
+  .demo-stats { grid-template-columns: repeat(2, 1fr); }
+  .arch-flow { flex-wrap: wrap; justify-content: center; }
+  nav { padding: 1rem 1.5rem; }
+  footer { flex-direction: column; gap: 1rem; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- Custom cursor -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAVIGATION -->
+<nav>
+  <a href="#" class="nav-logo">OMAR<span>.</span>MOMTAZ</a>
+  <div class="nav-tag">AI/ML · Computer Vision</div>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     HERO
+══════════════════════════════════════════ -->
+<section class="hero" id="home">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+
+  <!-- Particles -->
+  <div class="particles" id="particles"></div>
+
+  <div style="position:relative;z-index:2;">
+    <div class="hero-eyebrow">Computer Vision Project</div>
+
+    <h1 class="hero-title">
+      <span class="line1">Real-Time</span>
+      <span class="line2">Face Detection</span>
+      <span class="line3">System</span>
+    </h1>
+
+    <p class="hero-sub">
+      A production-ready computer vision pipeline — architected for deployment, built for extensibility, designed to impress clients.
+    </p>
+
+    <div class="hero-cta-row">
+      <a href="#demo" class="btn-primary">View Demo Output</a>
+      <a href="#hire" class="btn-ghost">Hire Omar</a>
+    </div>
+  </div>
+
+  <div class="scroll-hint">
+    <span>Scroll to explore</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     PROBLEM
+══════════════════════════════════════════ -->
+<section class="problem" id="problem">
+  <div class="problem-inner">
+    <div class="problem-text reveal left">
+      <div class="section-marker"><span class="num">01</span> The Challenge</div>
+      <h2>Most CV scripts <em>break</em> in production.</h2>
+      <p>Notebook demos don't scale. Spaghetti scripts can't be handed to engineering teams. Clients need working systems — not just working code.</p>
+      <p>This project was built from the ground up as a class-based, multi-mode, extensible pipeline. Every design decision made with deployment in mind.</p>
+    </div>
+
+    <div class="problem-visual reveal right">
+      <div class="scan-frame">
+        <div class="scan-line"></div>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3rem;">
+          <div class="face-placeholder">
+            <div class="face-circle">
+              <!-- Simple SVG face -->
+              <svg width="100" height="100" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(139,0,0,0.3)" stroke-width="1"/>
+                <circle cx="35" cy="42" r="7" fill="rgba(212,175,55,0.6)"/>
+                <circle cx="65" cy="42" r="7" fill="rgba(212,175,55,0.6)"/>
+                <path d="M 30 65 Q 50 78 70 65" stroke="rgba(212,175,55,0.5)" stroke-width="2" fill="none"/>
+              </svg>
+            </div>
+          </div>
+          <div class="detect-box">
+            <div class="detect-label">FACE · 94.2%</div>
+          </div>
+        </div>
+        <div class="confidence-bar" style="position:absolute;bottom:1.5rem;left:1.5rem;right:1.5rem;">
+          <div class="confidence-label">
+            <span>Confidence Score</span>
+            <span style="color:var(--gold)">94.2%</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     DEMO OUTPUT
+══════════════════════════════════════════ -->
+<section class="demo-output" id="demo">
+  <div class="demo-inner">
+    <div class="section-marker reveal"><span class="num">02</span> Live Output</div>
+
+    <div class="demo-screen reveal">
+      <div class="demo-topbar">
+        <div class="dot r"></div>
+        <div class="dot y"></div>
+        <div class="dot g"></div>
+        <span class="demo-filename">face_detection_result.png · 1 face detected · bbox 178×178px</span>
+      </div>
+      <div class="demo-img-area">
+        <img src="sample_image_output.png"
+             alt="Face detection output: original smiley face alongside detected face with blue bounding box"
+             onerror="this.outerHTML='<div style=\'width:100%;height:260px;display:flex;align-items:center;justify-content:center;background:#f5f5f5;color:#999;font-family:monospace;font-size:0.8rem\'>[sample_image_output.png — place in same folder]</div>'">
+      </div>
+    </div>
+
+    <div class="demo-stats reveal">
+      <div class="d-stat">
+        <span class="d-stat-num">1</span>
+        <div class="d-stat-label">Face Detected</div>
+      </div>
+      <div class="d-stat">
+        <span class="d-stat-num">178²</span>
+        <div class="d-stat-label">Bounding Box (px)</div>
+      </div>
+      <div class="d-stat">
+        <span class="d-stat-num">3</span>
+        <div class="d-stat-label">Cascade Layers</div>
+      </div>
+      <div class="d-stat">
+        <span class="d-stat-num">4</span>
+        <div class="d-stat-label">Operation Modes</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     ARCHITECTURE
+══════════════════════════════════════════ -->
+<section class="architecture" id="architecture">
+  <div class="arch-inner">
+    <div class="section-marker reveal"><span class="num">03</span> System Architecture</div>
+
+    <h2 class="arch-title reveal">Built Like a <span>Senior Engineer</span> Would.</h2>
+
+    <!-- Pipeline flow -->
+    <div class="arch-flow reveal">
+      <div class="arch-node">
+        <span class="arch-node-icon">📥</span>
+        <span class="arch-node-title">Input</span>
+        <span class="arch-node-sub">Image / Webcam / Folder</span>
+      </div>
+      <div class="arch-arrow"></div>
+      <div class="arch-node">
+        <span class="arch-node-icon">🔲</span>
+        <span class="arch-node-title">Grayscale</span>
+        <span class="arch-node-sub">BGR → Gray conversion</span>
+      </div>
+      <div class="arch-arrow"></div>
+      <div class="arch-node">
+        <span class="arch-node-icon">⚡</span>
+        <span class="arch-node-title">Cascade</span>
+        <span class="arch-node-sub">Multi-scale detection</span>
+      </div>
+      <div class="arch-arrow"></div>
+      <div class="arch-node">
+        <span class="arch-node-icon">👁️</span>
+        <span class="arch-node-title">ROI Analysis</span>
+        <span class="arch-node-sub">Eyes & smile within face</span>
+      </div>
+      <div class="arch-arrow"></div>
+      <div class="arch-node">
+        <span class="arch-node-icon">📤</span>
+        <span class="arch-node-title">Output</span>
+        <span class="arch-node-sub">Annotated image + data</span>
+      </div>
+    </div>
+
+    <!-- Features grid -->
+    <div class="feature-grid">
+      <div class="feat-card reveal delay-1">
+        <span class="feat-number">FEATURE · 001</span>
+        <div class="feat-title">Haar Cascade Detection</div>
+        <p class="feat-desc">Multi-scale face scanning with configurable scaleFactor, minNeighbors, and minSize thresholds for precision control.</p>
+      </div>
+      <div class="feat-card reveal delay-2">
+        <span class="feat-number">FEATURE · 002</span>
+        <div class="feat-title">Eye & Smile Analysis</div>
+        <p class="feat-desc">Region-of-interest detection within each face bounding box — eyes in upper half, smile in lower half, all composable.</p>
+      </div>
+      <div class="feat-card reveal delay-3">
+        <span class="feat-number">FEATURE · 003</span>
+        <div class="feat-title">Real-Time Webcam Mode</div>
+        <p class="feat-desc">Frame-by-frame live detection with on-screen face count, screenshot hotkey (S), and clean quit handler (Q).</p>
+      </div>
+      <div class="feat-card reveal delay-1">
+        <span class="feat-number">FEATURE · 004</span>
+        <div class="feat-title">Batch Folder Scanning</div>
+        <p class="feat-desc">Processes entire directories of JPG/PNG/BMP files and returns structured per-file detection reports.</p>
+      </div>
+      <div class="feat-card reveal delay-2">
+        <span class="feat-number">FEATURE · 005</span>
+        <div class="feat-title">Visualization Export</div>
+        <p class="feat-desc">150 DPI side-by-side matplotlib output — original vs detected — with labeled bounding boxes saved as PNG.</p>
+      </div>
+      <div class="feat-card reveal delay-3">
+        <span class="feat-number">FEATURE · 006</span>
+        <div class="feat-title">Clean OOP Interface</div>
+        <p class="feat-desc">FaceDetector class drops into any project in 4 lines. Swap to YOLOv8 or MediaPipe without touching the calling interface.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     CODE
+══════════════════════════════════════════ -->
+<section class="code-section" id="code">
+  <div class="code-inner">
+    <div class="code-meta reveal left">
+      <div class="section-marker"><span class="num">04</span> The Code</div>
+      <h2>Clean API.<br><span>Zero friction</span><br>integration.</h2>
+      <p>Drop FaceDetector into any existing Python codebase. Composable flags, structured return data, upgrade-safe architecture.</p>
+      <ul class="code-points">
+        <li>4 lines to full detection with eye + smile analysis</li>
+        <li>Structured dict output — bbox, eyes[], smile bool</li>
+        <li>All parameters are optional with sane defaults</li>
+        <li>Upgrade path: swap cascade → DNN without API changes</li>
+        <li>pip install and run — zero configuration required</li>
+      </ul>
+    </div>
+
+    <div class="code-window reveal right">
+      <div class="code-bar">
+        <div class="dot r"></div>
+        <div class="dot y"></div>
+        <div class="dot g"></div>
+        <span class="code-bar-name">main.py</span>
+        <span class="code-bar-badge">Python 3.x</span>
+      </div>
+      <pre class="code-content"><span class="cm"># ─── Core Integration ─────────────────────</span>
+<span class="kw">from</span> main <span class="kw">import</span> <span class="cls">FaceDetector</span>
+<span class="kw">import</span> cv2
+
+<span class="var">detector</span> = <span class="cls">FaceDetector</span>()
+<span class="var">image</span>    = cv2.<span class="fn">imread</span>(<span class="str">'photo.jpg'</span>)
+
+<span class="cm"># ─── Detect with all layers ───────────────</span>
+<span class="var">faces</span> = detector.<span class="fn">detect_faces</span>(
+  image,
+  detect_eyes  = <span class="kw">True</span>,
+  detect_smile = <span class="kw">True</span>
+)
+
+<span class="cm"># ─── Structured return data ───────────────</span>
+<span class="kw">for</span> face <span class="kw">in</span> faces:
+  x, y, w, h = face[<span class="str">'bbox'</span>]
+  eyes  = face[<span class="str">'eyes'</span>]    <span class="cm"># list of (x,y,w,h)</span>
+  smile = face[<span class="str">'smile'</span>]   <span class="cm"># bool | None</span>
+
+<span class="cm"># ─── Render output ────────────────────────</span>
+<span class="var">result</span> = detector.<span class="fn">draw_detections</span>(
+  image, faces, draw_eyes=<span class="kw">True</span>
+)
+
+<span class="cy">cv2</span>.<span class="fn">imwrite</span>(<span class="str">'output.jpg'</span>, result)</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     TERMINAL LOG
+══════════════════════════════════════════ -->
+<section class="terminal-section">
+  <div class="term-inner">
+    <div class="section-marker reveal"><span class="num">05</span> Console Output</div>
+
+    <div class="terminal-window reveal">
+      <div class="term-bar">
+        <div class="dot r"></div>
+        <div class="dot y"></div>
+        <div class="dot g"></div>
+        <span class="term-title">omar@momtaz-dev ~ zsh</span>
+        <div class="term-status"></div>
+      </div>
+      <div class="term-body">
+        <span class="t-sep">$ python main.py</span><br><br>
+        <span class="t-sep">══════════════════════════════════════════════════════════════════</span><br>
+        <span class="t-gold">DETECTING FACES IN IMAGE: test_face.jpg</span><br>
+        <span class="t-sep">══════════════════════════════════════════════════════════════════</span><br><br>
+        Detecting faces...<br>
+        <span class="t-cyan">→  Cascade: haarcascade_frontalface_default.xml</span><br>
+        <span class="t-cyan">→  scaleFactor: 1.1 · minNeighbors: 5 · minSize: (30,30)</span><br><br>
+        <span class="t-green">Found 1 face(s)!</span><br><br>
+        <span class="t-white">Detection Details:</span><br>
+        <span class="t-sep">──────────────────────────────────────────────────────────────────</span><br>
+        Face 1:<br>
+        &nbsp;&nbsp;Position : <span class="t-gold">(x=111, y=113)</span><br>
+        &nbsp;&nbsp;Size     : <span class="t-gold">178 × 178 px</span><br>
+        &nbsp;&nbsp;Eyes     : <span class="t-cyan">0 detected</span><br><br>
+        Result saved to → <span class="t-cyan">face_detection_result.png</span><br><br>
+        <span class="t-sep">══════════════════════════════════════════════════════════════════</span><br>
+        <span class="t-green">✓ Face detection complete!</span><br>
+        <span class="t-sep">══════════════════════════════════════════════════════════════════</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     USE CASES
+══════════════════════════════════════════ -->
+<section class="usecases" id="usecases">
+  <div class="usecases-inner">
+    <div class="section-marker reveal"><span class="num">06</span> Applications</div>
+    <h2 class="usecases-title reveal">Real clients. <em>Real problems.</em><br>Real deployments.</h2>
+
+    <div class="cases-grid">
+      <div class="case-card reveal delay-1">
+        <div class="case-icon">🔐</div>
+        <div class="case-title">Access Control</div>
+        <p class="case-desc">First-stage identity detection for attendance systems, entry gates, and verification pipelines.</p>
+      </div>
+      <div class="case-card reveal delay-2">
+        <div class="case-icon">📸</div>
+        <div class="case-title">Photo Management</div>
+        <p class="case-desc">Auto-tag and sort portraits from large image libraries — events, weddings, stock photo agencies.</p>
+      </div>
+      <div class="case-card reveal delay-3">
+        <div class="case-icon">📊</div>
+        <div class="case-title">Audience Analytics</div>
+        <p class="case-desc">Count unique faces in retail and event footage for footfall metrics and engagement dashboards.</p>
+      </div>
+      <div class="case-card reveal delay-1">
+        <div class="case-icon">🛡️</div>
+        <div class="case-title">Security Systems</div>
+        <p class="case-desc">Flag unrecognized faces in restricted zones with alert-system integration hooks built in.</p>
+      </div>
+      <div class="case-card reveal delay-2">
+        <div class="case-icon">🤖</div>
+        <div class="case-title">Robotics & IoT</div>
+        <p class="case-desc">Lightweight perception module for embedded systems, smart cameras, and robotics platforms.</p>
+      </div>
+      <div class="case-card reveal delay-3">
+        <div class="case-icon">🎓</div>
+        <div class="case-title">EdTech Monitoring</div>
+        <p class="case-desc">Presence detection during online assessments and virtual classrooms with privacy-first design.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     STACK
+══════════════════════════════════════════ -->
+<section class="stack-section">
+  <div class="stack-inner">
+    <div class="section-marker reveal"><span class="num">07</span> Stack</div>
+    <div class="stack-title reveal">Technologies</div>
+    <div class="stack-pills reveal">
+      <span class="s-pill core">Python 3.x</span>
+      <span class="s-pill core">OpenCV</span>
+      <span class="s-pill core">Haar Cascade</span>
+      <span class="s-pill lib">NumPy</span>
+      <span class="s-pill lib">Matplotlib</span>
+      <span class="s-pill lib">Pillow</span>
+      <span class="s-pill mode">Image Mode</span>
+      <span class="s-pill mode">Webcam Mode</span>
+      <span class="s-pill mode">Batch Mode</span>
+      <span class="s-pill mode">Test Generator</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     HIRE CTA
+══════════════════════════════════════════ -->
+<section class="hire-section" id="hire">
+  <div class="hire-bg"></div>
+  <div class="hire-bg-grid"></div>
+  <div class="hire-inner">
+    <div class="hire-eyebrow reveal">Available for Freelance</div>
+    <h2 class="hire-title reveal">
+      Need a<br><span>System,</span><br>Not a Script?
+    </h2>
+
+    <div class="divider reveal">
+      <div class="divider-line"></div>
+      <div class="divider-diamond"></div>
+      <div class="divider-line r"></div>
+    </div>
+
+    <p class="hire-sub reveal">
+      I build computer vision, AI, and ML systems that your team can own, extend, and deploy. Not demo notebooks — production deliverables.
+    </p>
+
+    <div class="hire-btns reveal">
+      <a href="#" class="btn-primary">Hire on Upwork</a>
+      <a href="#" class="btn-ghost">View GitHub</a>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════ -->
+<footer>
+  <div class="footer-brand">OMAR MOMTAZ</div>
+  <div class="footer-tag">AI/ML Engineering · Computer Vision · Python</div>
+</footer>
+
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════ -->
+<script>
+// ─── Custom Cursor ─────────────────────────
+const cursor = document.getElementById('cursor');
+const ring   = document.getElementById('cursorRing');
+let mx = 0, my = 0, rx = 0, ry = 0;
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursor.style.left = mx + 'px';
+  cursor.style.top  = my + 'px';
+});
+
+(function animRing() {
+  rx += (mx - rx) * 0.15;
+  ry += (my - ry) * 0.15;
+  ring.style.left = rx + 'px';
+  ring.style.top  = ry + 'px';
+  requestAnimationFrame(animRing);
+})();
+
+document.querySelectorAll('a, button, .feat-card, .case-card, .d-stat').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    cursor.style.width  = '20px';
+    cursor.style.height = '20px';
+    cursor.style.background = 'var(--gold)';
+    ring.style.width  = '52px';
+    ring.style.height = '52px';
+  });
+  el.addEventListener('mouseleave', () => {
+    cursor.style.width  = '12px';
+    cursor.style.height = '12px';
+    cursor.style.background = 'var(--cyan)';
+    ring.style.width  = '36px';
+    ring.style.height = '36px';
+  });
+});
+
+// ─── Scroll Reveal ─────────────────────────
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.12 });
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ─── Particles ─────────────────────────────
+const container = document.getElementById('particles');
+const colors = ['var(--gold)', 'var(--red-bright)', 'var(--cyan)', 'rgba(212,175,55,0.3)'];
+
+for (let i = 0; i < 30; i++) {
+  const p = document.createElement('div');
+  p.className = 'particle';
+  const size = Math.random() * 4 + 1;
+  const color = colors[Math.floor(Math.random() * colors.length)];
+  Object.assign(p.style, {
+    width:  size + 'px',
+    height: size + 'px',
+    left:   Math.random() * 100 + '%',
+    background: color,
+    animationDuration: (Math.random() * 15 + 10) + 's',
+    animationDelay:    (Math.random() * 15) + 's',
+    opacity: Math.random() * 0.6 + 0.1,
+    filter: color.includes('cyan') ? 'blur(1px)' : 'none',
+  });
+  container.appendChild(p);
+}
+
+// ─── Smooth scroll for anchors ─────────────
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    const target = document.querySelector(a.getAttribute('href'));
+    if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
+  });
+});
+</script>
+</body>
+</html>
